@@ -1,4 +1,6 @@
 'use client';
+import { paths } from '@/paths';
+import RouterLink from 'next/link';
 import {
   CellStyleModule,
   ClientSideRowModelModule,
@@ -27,6 +29,7 @@ import {
 import { AgGridReact } from "ag-grid-react";
 import React, {
   useCallback,
+  useEffect,
   useMemo,
   useRef,
   useState
@@ -40,6 +43,7 @@ import { Upload as UploadIcon } from '@phosphor-icons/react/dist/ssr/Upload';
 import { MagnifyingGlass as MagnifyingGlassIcon } from '@phosphor-icons/react/dist/ssr/MagnifyingGlass';
 import columndefinitions from './columndefinitions.json';
 import rowdata from './rowdata.json';
+import { useRouter } from "next/router";
 
 ModuleRegistry.registerModules([
   AdvancedFilterModule,
@@ -66,7 +70,7 @@ ModuleRegistry.registerModules([
 //import { ClientSideRowModelModule } from 'ag-grid-community';
 
 // Define the types for your data
-interface Employee {
+export interface Employee {
   id: number;
   name: string;
   age: number;
@@ -75,12 +79,11 @@ interface Employee {
 }
 
 export default function Page(): React.JSX.Element {
-  const [rows] = useState(rowdata);
-  const [cols] = useState(columndefinitions);
+  const [rows, setRows] = useState(rowdata);
+  const [cols, setCols] = useState(columndefinitions);
 
   const [advFilterEnabled, setAdvFilterEnabled] = useState(false); 
   const [filterEnabled, setFilterEnabled] = useState(false); 
-
 
   const gridRef = useRef<AgGridReact>(null);
   const containerStyle = useMemo(() => ({ width: "100%", height: "100%" }), []);
@@ -178,6 +181,7 @@ export default function Page(): React.JSX.Element {
       gridRef.current!.api.exportDataAsCsv();
     }, []);
     
+  
 
 /*     const onPdfExport = () => {
       if (gridRef.current) {
@@ -191,6 +195,26 @@ export default function Page(): React.JSX.Element {
       }
     };
  */
+    const [editEnabled, setEditEnabled] = useState(true); 
+    const [data_id, setData_id] = useState(); 
+    
+ // Handle row selection change
+ const onSelectionChanged = () => {
+    const selectedRows = gridRef.current!.api.getSelectedRows();
+  // Disable the Edit button if more than one row is selected
+  setEditEnabled(selectedRows.length !== 1);
+
+  if (selectedRows.length === 1) {
+    const selectedRowId = selectedRows[0].id;
+    console.log("Selected row ID:", selectedRowId);
+    setData_id(selectedRowId);
+  }else
+  {
+    setData_id(undefined);
+  } 
+
+};
+
   return (
 
     <Stack spacing={3}>
@@ -211,10 +235,14 @@ export default function Page(): React.JSX.Element {
       </Stack>
       <Stack direction="row" spacing={0.5} height={0.5} sx={{ alignItems: 'right' }}>
 
-        <Button startIcon={<PlusIcon fontSize="var(--icon-fontSize-md)" />} variant="contained">
+        <Button component={RouterLink} href={paths.dashboard.tuser}
+        startIcon={<PlusIcon fontSize="var(--icon-fontSize-md)" />} variant="contained">
           Add
         </Button><></>
-        <Button startIcon={<PlusIcon fontSize="var(--icon-fontSize-md)" />} variant="contained">
+        <Button 
+        component={RouterLink} href={paths.dashboard.tuser}
+        data-id={data_id}
+        disabled={editEnabled} startIcon={<PlusIcon fontSize="var(--icon-fontSize-md)" />} variant="contained">
           Edit
         </Button>
         <Button startIcon={<PlusIcon fontSize="var(--icon-fontSize-md)" />} variant="contained">
@@ -240,25 +268,7 @@ export default function Page(): React.JSX.Element {
         sx={{ maxWidth: '500px' }}
       />
     </Card>
-
-{/*       <input
-            type="text"
-            id="filter-text-box"
-            placeholder="Quick Filter..."
-            onInput={onFilterTextBoxChanged}
-          />
-              <button onClick={toggleAdvancedFilter}>
-        Advanced Filter
-      </button>
- */}
     </div>
-    <div className="example-header">
-{/*     <button onClick={toggleFilter}>
-        Filter
-      </button> */}      
-      {/* <button onClick={onBtnExport}>Download CSV export file</button>       */}
-      {/* <button onClick={onPdfExport}>Export to PDF</button> */}
-        </div>
       <div id="myGrid" style={gridStyle}>
         <AgGridReact
           columnDefs={cols}
@@ -275,7 +285,7 @@ export default function Page(): React.JSX.Element {
           cacheQuickFilter={true}
           quickFilterParser={quickFilterParser}
           quickFilterMatcher={quickFilterMatcher}
-
+          onSelectionChanged={onSelectionChanged} 
          //modules={[ClientSideRowModelModule]} // Import the necessary module here
         />
       </div>
